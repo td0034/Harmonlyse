@@ -2,10 +2,13 @@ import { useEffect } from 'react'
 import { useTracksStore } from '../features/tracks/tracksStore'
 import { TrackImport } from '../features/tracks/TrackImport'
 import { TrackList } from '../features/tracks/TrackList'
-import { TrackPlayer } from '../features/tracks/TrackPlayer'
+import { Waveform } from '../features/sections/Waveform'
 
 export function IngestView() {
   const refresh = useTracksStore((s) => s.refresh)
+  const tracks = useTracksStore((s) => s.tracks)
+  const selectedTrackId = useTracksStore((s) => s.selectedTrackId)
+  const selectedTrack = tracks.find((t) => t.id === selectedTrackId) ?? null
 
   useEffect(() => {
     void refresh()
@@ -16,21 +19,21 @@ export function IngestView() {
       <div>
         <h1 className="text-xl font-semibold">Ingest</h1>
         <p className="text-sm text-zinc-400">
-          Upload a track and play it back. Sectioning, analysis and tagging come
-          in later phases.
+          Upload a track, mark sections with dividers, and audition them. Analysis
+          and tagging come next.
         </p>
       </div>
 
       <TrackImport />
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">
         <div className="space-y-2">
           <h2 className="text-sm font-semibold text-zinc-300">Tracks</h2>
           <TrackList />
         </div>
         <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-zinc-300">Player</h2>
-          <TrackPlayer />
+          <h2 className="text-sm font-semibold text-zinc-300">Waveform &amp; sections</h2>
+          <Waveform track={selectedTrack} />
         </div>
       </div>
     </section>
