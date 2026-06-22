@@ -2,21 +2,7 @@ import type { EmotionTag } from '../../types'
 import { useSectionsStore } from '../sections/sectionsStore'
 import { useEmotionStore } from './emotionStore'
 import { EmotionPlane } from './EmotionPlane'
-
-const NAMED = [
-  'nostalgia',
-  'dread',
-  'euphoria',
-  'melancholy',
-  'tension',
-  'calm',
-  'triumph',
-  'longing',
-  'eerie',
-  'warmth',
-  'playful',
-  'yearning',
-]
+import { NAMED_EMOTIONS } from './names'
 
 function quadrantLabel(valence: number, arousal: number): string {
   if (arousal >= 0) return valence >= 0 ? 'high energy · pleasant' : 'high energy · unpleasant'
@@ -59,7 +45,7 @@ export function EmotionPanel() {
               Named emotions (independent of the point)
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {NAMED.map((n) => {
+              {NAMED_EMOTIONS.map((n) => {
                 const on = tag.names.includes(n)
                 return (
                   <button

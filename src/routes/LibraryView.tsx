@@ -3,6 +3,7 @@ import type { Snippet } from '../types'
 import { storage } from '../storage'
 import { formatTime } from '../lib/format'
 import { useSnippetsStore } from '../features/snippets/snippetsStore'
+import { SnippetFilters } from '../features/snippets/SnippetFilters'
 
 function quadrantLabel(valence: number, arousal: number): string {
   if (arousal >= 0) return valence >= 0 ? 'high · pleasant' : 'high · unpleasant'
@@ -62,9 +63,16 @@ export function LibraryView() {
       <div>
         <h1 className="text-xl font-semibold">Library</h1>
         <p className="text-sm text-zinc-400">
-          Saved snippets. Filters (emotion / Camelot / BPM) arrive in Phase 6.
+          Saved snippets — filter by Camelot, emotion quadrant, BPM range, and named
+          emotions.
         </p>
       </div>
+
+      <SnippetFilters />
+      <p className="text-xs text-zinc-500">
+        <span data-testid="snippet-count">{snippets.length}</span> snippet
+        {snippets.length === 1 ? '' : 's'}
+      </p>
 
       <audio
         ref={audioRef}
