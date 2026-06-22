@@ -52,20 +52,27 @@ export function computeSpectrumAndChroma(mono: Float32Array, sampleRate: number)
   const maxC = Math.max(...chroma, 1e-9)
   for (let i = 0; i < 12; i++) chroma[i] = chroma[i] / maxC
 
-  // Spectrum for display: average into DISPLAY_BARS bins, normalised.
-  const spectrum = new Array(DISPLAY_BARS).fill(0)
-  const per = acc.length / DISPLAY_BARS
-  for (let b = 0; b < DISPLAY_BARS; b++) {
-    let sum = 0
-    let count = 0
-    for (let i = Math.floor(b * per); i < Math.floor((b + 1) * per); i++) {
-      sum += acc[i]
-      count++
-    }
-    spectrum[b] = count ? sum / count : 0
+  // Spectrum for display: log-frequency bins, dB-scaled — far more legible
+  // for music than a linear axis (which crams everything into the low end).
+  const fMin = 30
+  const fMax = Math.min(sampleRate / 2, 16000)
+  const logMin = Math.log2(fMin)
+  const logSpan = Math.log2(fMax) - logMin
+  const power = new Array(DISPLAY_BARS).fill(0)
+  const counts = new Array(DISPLAY_BARS).fill(0)
+  for (let i = 1; i < acc.length; i++) {
+    const f = i * binHz
+    if (f < fMin || f > fMax) continue
+    let b = Math.floor(((Math.log2(f) - logMin) / logSpan) * DISPLAY_BARS)
+    if (b < 0) b = 0
+    if (b >= DISPLAY_BARS) b = DISPLAY_BARS - 1
+    power[b] += acc[i] * acc[i]
+    counts[b]++
   }
-  const maxS = Math.max(...spectrum, 1e-9)
-  for (let b = 0; b < DISPLAY_BARS; b++) spectrum[b] = spectrum[b] / maxS
+  const FLOOR_DB = -60
+  const db = power.map((p, b) => 10 * Math.log10((counts[b] ? p / counts[b] : 0) + 1e-12))
+  const maxDb = Math.max(...db)
+  const spectrum = db.map((d) => Math.max(0, Math.min(1, (d - (maxDb + FLOOR_DB)) / -FLOOR_DB)))
 
   return { spectrum, chroma }
 }

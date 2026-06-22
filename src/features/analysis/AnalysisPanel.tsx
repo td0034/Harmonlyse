@@ -124,25 +124,31 @@ export function AnalysisPanel() {
 
           <div>
             <div className="mb-1 text-xs text-zinc-400">Chroma</div>
-            <div data-testid="chroma" className="flex h-20 items-end gap-1">
+            {/* Bars are direct children of a fixed-height row so % heights resolve. */}
+            <div data-testid="chroma" className="flex h-24 items-end gap-1">
               {result.chroma.map((v, i) => (
-                <div key={i} className="flex flex-1 flex-col items-center gap-1">
-                  <div
-                    data-testid="chroma-bar"
-                    data-pc={i}
-                    data-value={v.toFixed(4)}
-                    className="w-full rounded-t bg-emerald-500/70"
-                    style={{ height: `${Math.max(2, v * 100)}%` }}
-                  />
-                  <span className="text-[10px] text-zinc-500">{NOTE_LABELS[i]}</span>
-                </div>
+                <div
+                  key={i}
+                  data-testid="chroma-bar"
+                  data-pc={i}
+                  data-value={v.toFixed(4)}
+                  className="flex-1 rounded-t bg-emerald-500/70"
+                  style={{ height: `${Math.max(2, v * 100)}%` }}
+                />
+              ))}
+            </div>
+            <div className="mt-1 flex gap-1">
+              {NOTE_LABELS.map((l, i) => (
+                <span key={i} className="flex-1 text-center text-[10px] text-zinc-500">
+                  {l}
+                </span>
               ))}
             </div>
           </div>
 
           <div>
-            <div className="mb-1 text-xs text-zinc-400">Spectrum</div>
-            <div data-testid="spectrum" className="flex h-16 items-end gap-px">
+            <div className="mb-1 text-xs text-zinc-400">Spectrum (log frequency, dB)</div>
+            <div data-testid="spectrum" className="flex h-24 items-end gap-px">
               {result.spectrum.map((v, i) => (
                 <div
                   key={i}

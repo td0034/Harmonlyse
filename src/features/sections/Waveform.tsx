@@ -62,6 +62,8 @@ export function Waveform({ track }: WaveformProps) {
         cursorColor: '#e4e4e7',
         minPxPerSec: zoomRef.current,
         dragToSeek: true,
+        autoScroll: true,
+        autoCenter: false,
       })
       const regions = ws.registerPlugin(RegionsPlugin.create())
       wsRef.current = ws
@@ -148,10 +150,19 @@ export function Waveform({ track }: WaveformProps) {
     }
   }, [sections, selectedId, ready])
 
-  // Apply zoom changes.
+  // Apply zoom changes, debounced — calling ws.zoom() on every slider tick
+  // re-renders the waveform repeatedly and looks glitchy.
   useEffect(() => {
     zoomRef.current = zoom
-    if (ready && wsRef.current) wsRef.current.zoom(zoom)
+    if (!(ready && wsRef.current)) return
+    const id = window.setTimeout(() => {
+      try {
+        wsRef.current?.zoom(zoom)
+      } catch {
+        /* zoom can throw if the instance is mid-teardown; ignore */
+      }
+    }, 60)
+    return () => window.clearTimeout(id)
   }, [zoom, ready])
 
   const togglePlay = () => void wsRef.current?.playPause()
@@ -200,7 +211,8 @@ export function Waveform({ track }: WaveformProps) {
           <input
             type="range"
             min={20}
-            max={400}
+            max={600}
+            step={10}
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
             className="accent-emerald-500"
