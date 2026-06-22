@@ -21,12 +21,13 @@ export function Waveform({ track }: WaveformProps) {
   const wsRef = useRef<WaveSurfer | null>(null)
   const regionsRef = useRef<RegionsPlugin | null>(null)
   const decodedRef = useRef<AudioBuffer | null>(null)
-  const zoomRef = useRef(80)
+  const fitPxRef = useRef(1)
 
   const [ready, setReady] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [current, setCurrent] = useState(0)
-  const [zoom, setZoom] = useState(80)
+  // Zoom is a multiplier over the fit-to-width baseline (1× = whole track fits).
+  const [zoomMult, setZoomMult] = useState(1)
 
   const sections = useSectionsStore((s) => s.sections)
   const duration = useSectionsStore((s) => s.duration)
@@ -46,6 +47,7 @@ export function Waveform({ track }: WaveformProps) {
     setReady(false)
     setPlaying(false)
     setCurrent(0)
+    setZoomMult(1)
 
     if (!track || !containerRef.current) return
 
@@ -60,7 +62,7 @@ export function Waveform({ track }: WaveformProps) {
         waveColor: '#3f3f46',
         progressColor: '#10b981',
         cursorColor: '#e4e4e7',
-        minPxPerSec: zoomRef.current,
+        minPxPerSec: 1, // start fit-to-width; the fit baseline is applied on decode
         dragToSeek: true,
         autoScroll: true,
         autoCenter: false,
@@ -74,6 +76,10 @@ export function Waveform({ track }: WaveformProps) {
         const decoded = ws.getDecodedData()
         decodedRef.current = decoded
         if (decoded) useAnalysisStore.getState().setBuffer(track.id, decoded)
+        // Baseline zoom = fit the whole track to the container width.
+        const cw = containerRef.current?.clientWidth ?? 0
+        fitPxRef.current = d > 0 && cw > 0 ? Math.max(1, cw / d) : 1
+        setZoomMult(1)
         void useSectionsStore.getState().load(track.id, d)
         setReady(true)
       })
@@ -153,17 +159,17 @@ export function Waveform({ track }: WaveformProps) {
   // Apply zoom changes, debounced — calling ws.zoom() on every slider tick
   // re-renders the waveform repeatedly and looks glitchy.
   useEffect(() => {
-    zoomRef.current = zoom
     if (!(ready && wsRef.current)) return
+    const px = Math.max(1, fitPxRef.current * zoomMult)
     const id = window.setTimeout(() => {
       try {
-        wsRef.current?.zoom(zoom)
+        wsRef.current?.zoom(px)
       } catch {
         /* zoom can throw if the instance is mid-teardown; ignore */
       }
     }, 60)
     return () => window.clearTimeout(id)
-  }, [zoom, ready])
+  }, [zoomMult, ready])
 
   const togglePlay = () => void wsRef.current?.playPause()
   const splitAtPlayhead = () => {
@@ -184,7 +190,11 @@ export function Waveform({ track }: WaveformProps) {
   return (
     <div className="space-y-3 rounded-lg border border-zinc-800 p-4">
       <div className="truncate text-sm font-medium">{track.name}</div>
-      <div ref={containerRef} data-testid="waveform" className="w-full rounded bg-zinc-900/40" />
+      <div
+        ref={containerRef}
+        data-testid="waveform"
+        className="w-full overflow-hidden rounded bg-zinc-900/40"
+      />
 
       <div className="flex flex-wrap items-center gap-3">
         <button
@@ -207,14 +217,14 @@ export function Waveform({ track }: WaveformProps) {
           Split at playhead
         </button>
         <label className="ml-auto flex items-center gap-2 text-xs text-zinc-400">
-          Zoom
+          Zoom {zoomMult}×
           <input
             type="range"
-            min={20}
-            max={600}
-            step={10}
-            value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))}
+            min={1}
+            max={40}
+            step={0.5}
+            value={zoomMult}
+            onChange={(e) => setZoomMult(Number(e.target.value))}
             className="accent-emerald-500"
           />
         </label>

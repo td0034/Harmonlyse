@@ -33,11 +33,11 @@ export function IngestView() {
       <AudioCapture />
 
       <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <h2 className="text-sm font-semibold text-zinc-300">Tracks</h2>
           <TrackList />
         </div>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <div className="space-y-2">
             <h2 className="text-sm font-semibold text-zinc-300">Waveform &amp; sections</h2>
             <Waveform track={selectedTrack} />
