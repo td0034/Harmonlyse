@@ -6,6 +6,7 @@ import { Waveform } from '../features/sections/Waveform'
 import { AnalysisPanel } from '../features/analysis/AnalysisPanel'
 import { EmotionPanel } from '../features/emotion/EmotionPanel'
 import { SaveSnippet } from '../features/snippets/SaveSnippet'
+import { TransformPanel } from '../features/transform/TransformPanel'
 
 export function IngestView() {
   const refresh = useTracksStore((s) => s.refresh)
@@ -41,6 +42,7 @@ export function IngestView() {
           </div>
           {selectedTrack && <AnalysisPanel />}
           {selectedTrack && <EmotionPanel />}
+          {selectedTrack && <TransformPanel />}
           {selectedTrack && <SaveSnippet />}
         </div>
       </div>

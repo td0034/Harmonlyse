@@ -42,6 +42,17 @@ export function makeKeyEstimate(tonic: string, scale: Scale, confidence: number)
   return { tonic: NOTE_NAMES[pc], scale, camelot: camelotOf(pc, scale), confidence }
 }
 
+/** Rotate a 12-bin chroma vector by `semitones` (a +n pitch shift moves
+ *  pitch-class i to i+n). Used when rendering a transformed snippet. */
+export function rotateChroma(chroma: number[], semitones: number): number[] {
+  const n = chroma.length
+  if (n === 0) return chroma
+  const shift = ((Math.round(semitones) % n) + n) % n
+  const out = new Array<number>(n)
+  for (let i = 0; i < n; i++) out[(i + shift) % n] = chroma[i]
+  return out
+}
+
 /**
  * Transpose a key by `semitones` (used by the Phase 7 transform dial).
  * Pitch class shifts; scale is unchanged. On the Camelot wheel a +1 semitone
