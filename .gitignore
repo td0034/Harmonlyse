@@ -6,3 +6,7 @@ dist-ssr
 .vite
 *.log
 *.tsbuildinfo
+
+# Reference audio dropped for analysis testing (may be large / copyrighted)
+test-tracks/*
+!test-tracks/README.txt

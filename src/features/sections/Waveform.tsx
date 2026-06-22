@@ -5,6 +5,7 @@ import type { Section, Track } from '../../types'
 import { storage } from '../../storage'
 import { formatTime } from '../../lib/format'
 import { snapToZeroCrossing } from '../../audio/zeroCrossing'
+import { useAnalysisStore } from '../analysis/analysisStore'
 import { useSectionsStore } from './sectionsStore'
 import { SectionList } from './SectionList'
 
@@ -26,10 +27,11 @@ export function Waveform({ track }: WaveformProps) {
   const [playing, setPlaying] = useState(false)
   const [current, setCurrent] = useState(0)
   const [zoom, setZoom] = useState(80)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   const sections = useSectionsStore((s) => s.sections)
   const duration = useSectionsStore((s) => s.duration)
+  const selectedId = useSectionsStore((s) => s.selectedSectionId)
+  const select = useSectionsStore((s) => s.select)
 
   const snap = useCallback(
     (t: number) => (decodedRef.current ? snapToZeroCrossing(decodedRef.current, t) : t),
@@ -44,7 +46,6 @@ export function Waveform({ track }: WaveformProps) {
     setReady(false)
     setPlaying(false)
     setCurrent(0)
-    setSelectedId(null)
 
     if (!track || !containerRef.current) return
 
@@ -68,7 +69,9 @@ export function Waveform({ track }: WaveformProps) {
 
       ws.on('decode', (d) => {
         if (cancelled || !ws) return
-        decodedRef.current = ws.getDecodedData()
+        const decoded = ws.getDecodedData()
+        decodedRef.current = decoded
+        if (decoded) useAnalysisStore.getState().setBuffer(track.id, decoded)
         void useSectionsStore.getState().load(track.id, d)
         setReady(true)
       })
@@ -80,7 +83,7 @@ export function Waveform({ track }: WaveformProps) {
       regions.on('region-clicked', (region, e) => {
         e.stopPropagation()
         if (region.id.startsWith(SEC_PREFIX)) {
-          setSelectedId(region.id.slice(SEC_PREFIX.length))
+          useSectionsStore.getState().select(region.id.slice(SEC_PREFIX.length))
           region.play(true)
         }
       })
@@ -157,7 +160,7 @@ export function Waveform({ track }: WaveformProps) {
     if (ws) void useSectionsStore.getState().splitAt(snap(ws.getCurrentTime()))
   }
   const playSection = (s: Section) => {
-    setSelectedId(s.id)
+    select(s.id)
     void wsRef.current?.play(s.startSec, s.endSec)
   }
 
@@ -214,7 +217,7 @@ export function Waveform({ track }: WaveformProps) {
         sections={sections}
         selectedId={selectedId}
         onPlay={playSection}
-        onSelect={setSelectedId}
+        onSelect={select}
         onRename={(id, label) => void useSectionsStore.getState().rename(id, label)}
         onRemove={(id) => void useSectionsStore.getState().removeSection(id)}
       />

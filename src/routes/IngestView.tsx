@@ -3,6 +3,7 @@ import { useTracksStore } from '../features/tracks/tracksStore'
 import { TrackImport } from '../features/tracks/TrackImport'
 import { TrackList } from '../features/tracks/TrackList'
 import { Waveform } from '../features/sections/Waveform'
+import { AnalysisPanel } from '../features/analysis/AnalysisPanel'
 
 export function IngestView() {
   const refresh = useTracksStore((s) => s.refresh)
@@ -31,9 +32,12 @@ export function IngestView() {
           <h2 className="text-sm font-semibold text-zinc-300">Tracks</h2>
           <TrackList />
         </div>
-        <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-zinc-300">Waveform &amp; sections</h2>
-          <Waveform track={selectedTrack} />
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h2 className="text-sm font-semibold text-zinc-300">Waveform &amp; sections</h2>
+            <Waveform track={selectedTrack} />
+          </div>
+          {selectedTrack && <AnalysisPanel />}
         </div>
       </div>
     </section>

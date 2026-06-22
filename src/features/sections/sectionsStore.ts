@@ -13,7 +13,10 @@ interface SectionsState {
   duration: number
   /** Contiguous, non-overlapping sections sorted by startSec, covering [0, duration]. */
   sections: Section[]
+  /** Section currently selected for analysis / tagging. */
+  selectedSectionId: string | null
 
+  select: (id: string | null) => void
   load: (trackId: string, duration: number) => Promise<void>
   /** Split the section containing `timeSec` into two at that point. */
   splitAt: (timeSec: number) => Promise<void>
@@ -41,13 +44,16 @@ export const useSectionsStore = create<SectionsState>((set, get) => ({
   trackId: null,
   duration: 0,
   sections: [],
+  selectedSectionId: null,
+
+  select: (id) => set({ selectedSectionId: id }),
 
   load: async (trackId, duration) => {
     const stored = await storage.getSectionsByTrack(trackId)
     const sections = stored.length
       ? stored.slice().sort((a, b) => a.startSec - b.startSec)
       : [{ id: uid(), trackId, startSec: 0, endSec: duration, label: '' }]
-    set({ trackId, duration, sections })
+    set({ trackId, duration, sections, selectedSectionId: sections[0]?.id ?? null })
   },
 
   splitAt: async (timeSec) => {
@@ -88,7 +94,9 @@ export const useSectionsStore = create<SectionsState>((set, get) => ({
     if (i === -1 || i === sections.length - 1) return
     const merged: Section = { ...sections[i], endSec: sections[i + 1].endSec }
     const next = [...sections.slice(0, i), merged, ...sections.slice(i + 2)]
-    set({ sections: next })
+    const selected = get().selectedSectionId
+    const keepSel = next.some((s) => s.id === selected) ? selected : merged.id
+    set({ sections: next, selectedSectionId: keepSel })
     await persistSections(trackId, next)
   },
 
