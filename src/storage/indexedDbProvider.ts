@@ -10,42 +10,42 @@ import {
 
 /** Local-first StorageProvider backed by IndexedDB (via `idb`). */
 export class IndexedDbProvider implements StorageProvider {
-  private db: IDBPDatabase<HarmolyseDB> | null = null
+  private dbPromise: Promise<IDBPDatabase<HarmolyseDB>> | null = null
 
-  async init(): Promise<void> {
-    if (!this.db) this.db = await openHarmolyseDb()
+  /** Open (once) and reuse the connection. Self-initialising so feature
+   *  code can't race the app's explicit init() call. */
+  private ensureDb(): Promise<IDBPDatabase<HarmolyseDB>> {
+    if (!this.dbPromise) this.dbPromise = openHarmolyseDb()
+    return this.dbPromise
   }
 
-  private get database(): IDBPDatabase<HarmolyseDB> {
-    if (!this.db) {
-      throw new Error('StorageProvider not initialised — call init() first')
-    }
-    return this.db
+  async init(): Promise<void> {
+    await this.ensureDb()
   }
 
   // Tracks
   async putTrack(track: Track): Promise<void> {
-    await this.database.put('tracks', track)
+    await (await this.ensureDb()).put('tracks', track)
   }
-  getTrack(id: string): Promise<Track | undefined> {
-    return this.database.get('tracks', id)
+  async getTrack(id: string): Promise<Track | undefined> {
+    return (await this.ensureDb()).get('tracks', id)
   }
-  getAllTracks(): Promise<Track[]> {
-    return this.database.getAll('tracks')
+  async getAllTracks(): Promise<Track[]> {
+    return (await this.ensureDb()).getAll('tracks')
   }
   async deleteTrack(id: string): Promise<void> {
-    await this.database.delete('tracks', id)
+    await (await this.ensureDb()).delete('tracks', id)
   }
 
   // Sections
   async putSection(section: Section): Promise<void> {
-    await this.database.put('sections', section)
+    await (await this.ensureDb()).put('sections', section)
   }
-  getSectionsByTrack(trackId: string): Promise<Section[]> {
-    return this.database.getAllFromIndex('sections', 'by-track', trackId)
+  async getSectionsByTrack(trackId: string): Promise<Section[]> {
+    return (await this.ensureDb()).getAllFromIndex('sections', 'by-track', trackId)
   }
   async deleteSection(id: string): Promise<void> {
-    await this.database.delete('sections', id)
+    await (await this.ensureDb()).delete('sections', id)
   }
 
   // Snippets
@@ -54,24 +54,25 @@ export class IndexedDbProvider implements StorageProvider {
       ...snippet,
       emotionQuadrant: quadrantOf(snippet.emotion.valence, snippet.emotion.arousal),
     }
-    await this.database.put('snippets', stored)
+    await (await this.ensureDb()).put('snippets', stored)
   }
   async getSnippet(id: string): Promise<Snippet | undefined> {
-    return stripStored(await this.database.get('snippets', id))
+    return stripStored(await (await this.ensureDb()).get('snippets', id))
   }
   async querySnippets(filter: SnippetFilter = {}): Promise<Snippet[]> {
+    const db = await this.ensureDb()
     // Narrow with the most selective index available, then refine in memory.
     let rows: StoredSnippet[]
     if (filter.sectionId) {
-      rows = await this.database.getAllFromIndex('snippets', 'by-section', filter.sectionId)
+      rows = await db.getAllFromIndex('snippets', 'by-section', filter.sectionId)
     } else if (filter.trackId) {
-      rows = await this.database.getAllFromIndex('snippets', 'by-track', filter.trackId)
+      rows = await db.getAllFromIndex('snippets', 'by-track', filter.trackId)
     } else if (filter.camelot) {
-      rows = await this.database.getAllFromIndex('snippets', 'by-camelot', filter.camelot)
+      rows = await db.getAllFromIndex('snippets', 'by-camelot', filter.camelot)
     } else if (filter.quadrant) {
-      rows = await this.database.getAllFromIndex('snippets', 'by-quadrant', filter.quadrant)
+      rows = await db.getAllFromIndex('snippets', 'by-quadrant', filter.quadrant)
     } else {
-      rows = await this.database.getAll('snippets')
+      rows = await db.getAll('snippets')
     }
 
     return rows
@@ -82,19 +83,19 @@ export class IndexedDbProvider implements StorageProvider {
       .map((r) => stripStored(r)!)
   }
   async deleteSnippet(id: string): Promise<void> {
-    await this.database.delete('snippets', id)
+    await (await this.ensureDb()).delete('snippets', id)
   }
 
   // Audio blobs
   async putBlob(key: string, blob: Blob): Promise<void> {
-    await this.database.put('audioBlobs', { key, blob })
+    await (await this.ensureDb()).put('audioBlobs', { key, blob })
   }
   async getBlob(key: string): Promise<Blob | undefined> {
-    const rec = await this.database.get('audioBlobs', key)
+    const rec = await (await this.ensureDb()).get('audioBlobs', key)
     return rec?.blob
   }
   async deleteBlob(key: string): Promise<void> {
-    await this.database.delete('audioBlobs', key)
+    await (await this.ensureDb()).delete('audioBlobs', key)
   }
 
   async estimateUsage(): Promise<StorageEstimate | undefined> {
