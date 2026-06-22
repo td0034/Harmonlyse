@@ -35,7 +35,7 @@ export function TrackImport() {
         }`}
       >
         <p className="text-sm text-zinc-300">
-          {busy ? 'Importing…' : 'Drop audio here, or click to choose'}
+          {busy ? 'Importing…' : 'Tap to choose audio — or drop a file'}
         </p>
         <p className="mt-1 text-xs text-zinc-500">wav · mp3 · flac · m4a</p>
         <input

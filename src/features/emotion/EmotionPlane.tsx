@@ -33,20 +33,24 @@ export function EmotionPlane({ valence, arousal, onChange }: EmotionPlaneProps) 
     <div
       ref={ref}
       data-testid="va-plane"
-      onMouseDown={(e) => {
+      // Pointer events unify mouse + touch + stylus; touch-none stops the page
+      // scrolling while you drag the point on a phone.
+      onPointerDown={(e) => {
         dragging.current = true
+        ref.current?.setPointerCapture(e.pointerId)
         update(e.clientX, e.clientY)
       }}
-      onMouseMove={(e) => {
+      onPointerMove={(e) => {
         if (dragging.current) update(e.clientX, e.clientY)
       }}
-      onMouseUp={() => {
+      onPointerUp={(e) => {
+        dragging.current = false
+        ref.current?.releasePointerCapture(e.pointerId)
+      }}
+      onPointerCancel={() => {
         dragging.current = false
       }}
-      onMouseLeave={() => {
-        dragging.current = false
-      }}
-      className="relative aspect-square w-56 shrink-0 cursor-crosshair select-none rounded-lg border border-zinc-700 bg-zinc-900"
+      className="relative aspect-square w-56 max-w-full shrink-0 cursor-crosshair touch-none select-none rounded-lg border border-zinc-700 bg-zinc-900"
     >
       <div className="absolute left-1/2 top-0 h-full w-px bg-zinc-700/60" />
       <div className="absolute left-0 top-1/2 h-px w-full bg-zinc-700/60" />
