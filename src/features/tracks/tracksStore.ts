@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { storage } from '../../storage'
-import type { Track } from '../../types'
+import type { Track, TrackSource } from '../../types'
 import { uid } from '../../lib/id'
 import { decodeMeta } from '../../audio/decode'
 
@@ -13,11 +13,32 @@ interface TracksState {
   error?: string
   refresh: () => Promise<void>
   importFiles: (files: FileList | File[]) => Promise<void>
+  importCapture: (blob: Blob) => Promise<void>
   select: (id: string | null) => void
   remove: (id: string) => Promise<void>
 }
 
 const ACCEPTED = /\.(wav|mp3|flac|m4a|aac|ogg)$/i
+
+/** Decode, persist the Blob, and create a Track record. Returns the track id. */
+async function ingestBlob(blob: Blob, name: string, source: TrackSource): Promise<string> {
+  // Decode first so an undecodable input leaves no orphan blob/record.
+  const meta = await decodeMeta(await blob.arrayBuffer())
+  const id = uid()
+  const audioBlobKey = `track-${id}`
+  await storage.putBlob(audioBlobKey, blob)
+  const track: Track = {
+    id,
+    source,
+    name,
+    durationSec: meta.durationSec,
+    sampleRate: meta.sampleRate,
+    audioBlobKey,
+    createdAt: Date.now(),
+  }
+  await storage.putTrack(track)
+  return id
+}
 
 export const useTracksStore = create<TracksState>((set, get) => ({
   tracks: [],
@@ -48,27 +69,26 @@ export const useTracksStore = create<TracksState>((set, get) => ({
     try {
       let lastId: string | null = null
       for (const file of list) {
-        // Decode first so an undecodable file leaves no orphan blob/record.
-        const meta = await decodeMeta(await file.arrayBuffer())
-        const id = uid()
-        const audioBlobKey = `track-${id}`
-        await storage.putBlob(audioBlobKey, file)
-        const track: Track = {
-          id,
-          source: 'upload',
-          name: file.name,
-          durationSec: meta.durationSec,
-          sampleRate: meta.sampleRate,
-          audioBlobKey,
-          createdAt: Date.now(),
-        }
-        await storage.putTrack(track)
-        lastId = id
+        lastId = await ingestBlob(file, file.name, 'upload')
       }
       await get().refresh()
       if (lastId) set({ selectedTrackId: lastId })
     } catch (e) {
       set({ error: e instanceof Error ? e.message : 'Import failed' })
+    } finally {
+      set({ importState: 'idle' })
+    }
+  },
+
+  importCapture: async (blob) => {
+    set({ importState: 'importing', error: undefined })
+    try {
+      const name = `Capture ${new Date().toLocaleString()}`
+      const id = await ingestBlob(blob, name, 'capture')
+      await get().refresh()
+      set({ selectedTrackId: id })
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : 'Capture import failed' })
     } finally {
       set({ importState: 'idle' })
     }

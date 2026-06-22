@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useTracksStore } from '../features/tracks/tracksStore'
 import { TrackImport } from '../features/tracks/TrackImport'
+import { AudioCapture } from '../features/tracks/AudioCapture'
 import { TrackList } from '../features/tracks/TrackList'
 import { Waveform } from '../features/sections/Waveform'
 import { AnalysisPanel } from '../features/analysis/AnalysisPanel'
@@ -29,6 +30,7 @@ export function IngestView() {
       </div>
 
       <TrackImport />
+      <AudioCapture />
 
       <div className="grid gap-6 lg:grid-cols-[18rem_1fr]">
         <div className="space-y-2">
